@@ -1,6 +1,7 @@
 const NodejsInventory = require('nodejs-inventory')
 const gaussian = require('gaussian')
 const Q = require('q')
+const Promise = require('bluebird')
 
 const factory = require('./factory')
 const Monitor = require('./monitor')
@@ -21,19 +22,22 @@ let fakeDate = new Date('2018-01-01T00:00:00.000Z')
 createDummyItems()
   .then(createItemsConfig)
   .then(insertTransactions)
+// .catch((e)=>{
+//   console.log('err ',e);
+// })
 
 function insertTransactions() {
   let funcs = [...[...Array(simulationDays).keys()].map(createDailyTransactions)]
-  return funcs.reduce((soFar, f) => {
-    return soFar.then(f)
-  }, Q());
+  console.log(funcs);
+  return funcs.reduce(Q.when, Q());
+  //return Promise.each(funcs)
 }
 
 
 function createDummyItems() {
   const dummyItems = factory.getDummyItems(simulationId, 3)
   let insertItemsPromises = dummyItems.map(item => (Inventory.items.upsertItem(item)))
-  return Q.all(insertItemsPromises)
+  return Promise.all(insertItemsPromises)
 }
 
 function createItemsConfig() {
@@ -42,31 +46,32 @@ function createItemsConfig() {
       let insertConfigsPromises = items.map((item, index) => {
         monitor.saveItemMonitorConfig({ item: item.id, ...itemsMonitorConfig[index] })
       })
-      return Q.all(insertConfigsPromises)
+      return Promise.all(insertConfigsPromises)
     })
 }
 
 
 function createDailyTransactions() {
-  return Inventory.items.getItems()
-    .then(items => {
-      let getConfigPromises = items.map(({ _id }) => (monitor.getItemMonitorConfig({ item: _id.toString() })))
-      return Q.all(getConfigPromises)
-    })
-    .then(itemsConfig => {
-      let saveTransactionsPromises = itemsConfig.map(itemConfig => {
-        let { demandMean, demandDeviation } = itemConfig.params[itemConfig.policy]
-        let quantity = gaussian(demandMean, demandDeviation)
-        let transaction = factory.getDummyTransaction(itemConfig.item, quantity, fakeDate)
-        console.log(transaction);
-        return Inventory.transactions.saveTransaction(transaction)
+  return function() {
+    return Inventory.items.getItems()
+      .then(items => {
+        let getConfigPromises = items.map(({ _id }) => (monitor.getItemMonitorConfig({ item: _id.toString() })))
+        return Promise.all(getConfigPromises)
       })
-      console.log(saveTransactionsPromises);
-      return Q.all(saveTransactionsPromises)
-    })
-    .then(()=>{
-      fakeDate=new Date(fakeDate.getTime()+millisInDay)
-      console.log(fakeDate)
-      return fakeDate
-    })
+      .then(itemsConfig => {
+        let saveTransactionsPromises = itemsConfig.map(itemConfig => {
+          let { demandMean, demandDeviation } = itemConfig.params[itemConfig.policy]
+          let quantity = gaussian(demandMean, demandDeviation)
+          let transaction = factory.getDummyTransaction(itemConfig.item, quantity, fakeDate)
+          return Inventory.transactions.saveTransaction(transaction)
+        })
+        return Promise.all(saveTransactionsPromises)
+      })
+      .then(() => {
+        fakeDate = new Date(fakeDate.getTime() + millisInDay)
+        console.log(fakeDate);
+        return fakeDate;
+      })
+  }
+
 }
