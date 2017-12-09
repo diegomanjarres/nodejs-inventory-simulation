@@ -13,7 +13,7 @@ function newItem(testId, counter) {
 }
 
 function newTransaction(itemId, testId, counter, quantity, date ) {
-  quantity = quantity || counter % 2 ? 100 * (1 + counter) : -100 * (1 + counter)
+  //quantity = quantity || counter % 2 ? 100 * (1 + counter) : -100 * (1 + counter)
   return {
     item: itemId,
     date,
@@ -31,7 +31,7 @@ function getDummyTransactions(itemId, testId, n) {
   ].map(k => (newTransaction(itemId, testId, k)))
 }
 
-function getDummyTransaction(itemId, quantity, fakeDate) {
+function createTransaction(itemId, quantity, fakeDate) {
   return newTransaction(itemId, 'any', 0, quantity, fakeDate)
 }
 
@@ -41,4 +41,4 @@ function getDummyItems(testId, n) {
   ].map(k => (newItem(testId, k)))
 }
 
-module.exports = { getDummyItems, getDummyTransactions, getDummyTransaction }
+module.exports = { getDummyItems, getDummyTransactions, createTransaction }

@@ -2,10 +2,10 @@ module.exports = [{
     policy: 'EOQ',
     params: {
       EOQ: {
-        demandMean: 1000,
-        demandDeviation: 100,
+        demandMean: 100,
+        demandDeviation: 10,
         leadTime: 2,
-        setupCost: 3,
+        setupCost: 800,
         proportionalCost: 4,
         holdingCost: 1
       }
@@ -15,8 +15,8 @@ module.exports = [{
     policy: 'NEWSBOY',
     params: {
       NEWSBOY: {
-        demandMean: 1000,
-        demandDeviation: 100,
+        demandMean: 100,
+        demandDeviation: 10,
         overageCost: 100,
         underageCost: 50,
         cycleDays: 30
@@ -27,8 +27,8 @@ module.exports = [{
     policy: 'QR',
     params: {
       QR: {
-        demandMean: 1000,
-        demandDeviation: 100,
+        demandMean: 100,
+        demandDeviation: 10,
         leadTime: 2,
         setupCost: 3,
         holdingCost: 1,

@@ -1,23 +1,33 @@
 var mongoose = require('mongoose')
 var Schema = mongoose.Schema
 const connect = mongoose.connect.bind(mongoose)
+const NEWSBOY = require('./newsboy')
+const EOQ = require('./economic-order-quantity')
+const policies = { NEWSBOY,EOQ }
 
-module.exports = function(InventoryLogic) {
-  function check(itemID) {
-    getItemMonitorConfig({
-      item: itemID
-    }).then((monitorConfig) => {
-      return InventoryLogic.getItemStockLevel({
-        item: itemID
-      })
-    })
-  }
+
+module.exports = function(Inventory) {
+  this.Inventory = Inventory
+
   return {
-    check,
+    check: check.bind(this),
     connect,
     getItemMonitorConfig,
     saveItemMonitorConfig
   }
+}
+
+function check(transaction) {
+  const { item, date } = transaction
+  getItemMonitorConfig({item})
+  .then((monitorConfig) => {
+    const policy=monitorConfig.policy
+    if (policies[policy])
+      return policies[policy].call(this,transaction,monitorConfig.params[policy])
+    return this.Inventory.inventory
+      .getItemStockLevel({item, date})
+      .then(console.log)
+  })
 }
 
 const itemMonitorConfigSchema = new Schema({
