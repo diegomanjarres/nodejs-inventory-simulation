@@ -16,7 +16,6 @@ module.exports = function(transaction, params) {
     .getItemStockLevel({item, date})
     .then(stockLevel=>{
       if(stockLevel<=0){
-        console.log('stockLevelEOQ ',date, ' ',stockLevel);
         let orderSize = Math.sqrt(2*setupCost*demandMean/holdingCost)
         orderSize = Math.floor(orderSize)
         let restockTransaction = factory.createTransaction(item, orderSize, date)

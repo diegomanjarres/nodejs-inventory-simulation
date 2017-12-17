@@ -26,7 +26,6 @@ function check(transaction) {
       return policies[policy].call(this,transaction,monitorConfig.params[policy])
     return this.Inventory.inventory
       .getItemStockLevel({item, date})
-      .then(console.log)
   })
 }
 
