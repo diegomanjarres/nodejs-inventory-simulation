@@ -3,6 +3,7 @@ const gaussian = require('gaussian')
 const Q = require('q')
 const Promise = require('bluebird')
 const express = require('express')
+const mongoose= require('mongoose')
 
 const factory = require('./factory')
 const Monitor = require('./monitor')
@@ -44,6 +45,7 @@ function runSimulation(req, res, next) {
     .then(() => insertTransactions(simulationDates))
     .then(() => graphResults(Inventory, simulationDates))
     .then((result) => res.send(result))
+    .then(()=>mongoose.connect(mongoHost + databaseName).connection.db.dropDatabase())
 
 }
 
