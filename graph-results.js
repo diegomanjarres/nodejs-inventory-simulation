@@ -6,7 +6,6 @@ module.exports = function(Inventory, simulationDates) {
     .then(items => {
       return Promise.mapSeries(items, (item) => {
         return Promise.mapSeries(simulationDates, (date) => {
-          console.log(item._id,date);
           return Inventory.inventory.getItemStockLevel({ item: item._id, date })
         })
       })

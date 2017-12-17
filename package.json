@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "bluebird": "^3.5.1",
+    "express": "^4.16.2",
     "gaussian": "^1.1.0",
     "mongoose": "^4.13.5",
     "nodejs-inventory": "^1.3.5",

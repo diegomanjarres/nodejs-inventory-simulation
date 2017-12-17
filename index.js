@@ -2,45 +2,58 @@ const NodejsInventory = require('nodejs-inventory')
 const gaussian = require('gaussian')
 const Q = require('q')
 const Promise = require('bluebird')
+const express = require('express')
 
 const factory = require('./factory')
 const Monitor = require('./monitor')
 const graphResults = require('./graph-results')
 const itemsMonitorConfig = require('./items-monitor-config')
-const simulationId = 'simulation one'
-const mongoConnectionString = process.env.DB || 'localhost:27017/' + new Date().getTime()
 
-const Inventory = new NodejsInventory()
-Inventory.connect(mongoConnectionString)
-const monitor = new Monitor(Inventory)
-monitor.connect(mongoConnectionString)
-Inventory.startMonitor(monitor)
-
+let simulationId = 0
+var Inventory, monitor
+const mongoHost = 'localhost:27017/'
 
 
 
 
 global.simulationDays = 20
 global.startDate = new Date('2018-01-01T00:00:00.000Z')
-let fakeDate = global.startDate
 const millisInDay = 1000 * 60 * 60 * 24
-let simulationDates = [...Array(global.simulationDays)]
-  .map(() => (fakeDate = new Date(fakeDate.getTime() + millisInDay)))
 
-createDummyItems()
-  .then(createItemsConfig)
-  .then(insertTransactions)
-  .then(function() { return graphResults(Inventory,simulationDates) })
-  .then(console.log)
-//.then(process.exit)
+const app = express()
+app.use(express.static('public'))
+app.get('/simulate/:days', runSimulation)
 
-function insertTransactions() {
-  return Promise.mapSeries(simulationDates,createDailyTransactions)
+app.listen(process.env.PORT || 8000)
+
+function runSimulation(req, res, next) {
+
+  simulationId++
+  let fakeDate = global.startDate
+  let simulationDates = [...Array(parseInt(req.params.days))]
+    .map(() => (fakeDate = new Date(fakeDate.getTime() + millisInDay)))
+  Inventory = new NodejsInventory()
+  let databaseName = ('' + new Date().getTime()).substring(6) + '_' + simulationId
+  Inventory.connect(mongoHost + databaseName)
+  monitor = new Monitor(Inventory)
+  monitor.connect(mongoHost + databaseName)
+  Inventory.startMonitor(monitor)
+
+  createDummyItems()
+    .then(createItemsConfig)
+    .then(() => insertTransactions(simulationDates))
+    .then(() => graphResults(Inventory, simulationDates))
+    .then((result) => res.send(result))
+
+}
+
+function insertTransactions(simulationDates) {
+  return Promise.mapSeries(simulationDates, createDailyTransactions)
 }
 
 
 function createDummyItems() {
-  const dummyItems = factory.getDummyItems(simulationId, 3)
+  const dummyItems = factory.getDummyItems('simulation number ' + simulationId, 3)
   let insertItemsPromises = dummyItems.map(item => (Inventory.items.upsertItem(item)))
   return Promise.all(insertItemsPromises)
 }
