@@ -3,7 +3,7 @@ const gaussian = require('gaussian')
 const Q = require('q')
 const Promise = require('bluebird')
 const express = require('express')
-const mongoose= require('mongoose')
+const mongoose = require('mongoose')
 
 const factory = require('./factory')
 const Monitor = require('./monitor')
@@ -34,19 +34,26 @@ function runSimulation(req, res, next) {
   let simulationDates = [...Array(parseInt(req.params.days))]
     .map(() => (fakeDate = new Date(fakeDate.getTime() + millisInDay)))
   Inventory = new NodejsInventory()
-  let databaseName = ('' + new Date().getTime()).substring(6) + '_' + simulationId
-  Inventory.connect(mongoHost + databaseName)
   monitor = new Monitor(Inventory)
-  monitor.connect(mongoHost + databaseName)
-  Inventory.startMonitor(monitor)
-
+  setUpNewConnection()
   createDummyItems()
     .then(createItemsConfig)
     .then(() => insertTransactions(simulationDates))
     .then(() => graphResults(Inventory, simulationDates))
     .then((result) => res.send(result))
-    .then(()=>mongoose.connect(mongoHost + databaseName).connection.db.dropDatabase())
 
+}
+
+function setUpNewConnection() {
+  let databaseName = ('' + new Date().getTime()).substring(6) + '_' + simulationId
+  try{
+    mongoose.connect(mongoHost + databaseName).connection.db.dropDatabase()
+  } catch (e){
+    console.log(e)
+  }
+  Inventory.connect(mongoHost + databaseName)
+  monitor.connect(mongoHost + databaseName)
+  Inventory.startMonitor(monitor)
 }
 
 function insertTransactions(simulationDates) {

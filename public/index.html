@@ -1,0 +1,58 @@
+<html>
+
+<head>
+  <title></title>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.0/angular.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.0.2/Chart.min.js"></script>
+  <script src="//cdn.jsdelivr.net/angular.chartjs/latest/angular-chart.min.js"></script>
+</head>
+
+<body ng-app="myApp">
+  <div ng-controller="MyAppCtrl">
+    {{simulationOutput}}
+    <canvas id="line" class="chart chart-line" chart-data="data" chart-labels="labels" chart-series="series" chart-options="options" chart-dataset-override="datasetOverride" chart-click="onClick">
+</canvas>
+  </div>
+</body>
+<script>
+  angular.module('myApp', ['chart.js'])
+    .controller('MyAppCtrl', function($scope,$http) {
+      $scope.data = []
+      $scope.labels = []
+      $http.get('/simulate/10').then(function(res){
+        $scope.data = res.data
+        $scope.labels = Array.apply(null, {length:10}).map(Function.call, Number);
+
+
+      })
+      // $scope.labels = ["January", "February", "March", "April", "May", "June", "July"];
+      $scope.series = ['Series A', 'Series B', 'Series C'];
+      $scope.onClick = function(points, evt) {
+        console.log(points, evt);
+      };
+      $scope.datasetOverride = [{
+        yAxisID: 'y-axis-1'
+      }, {
+        yAxisID: 'y-axis-2'
+      }];
+      $scope.options = {
+        scales: {
+          yAxes: [{
+              id: 'y-axis-1',
+              type: 'linear',
+              display: true,
+              position: 'left'
+            },
+            {
+              id: 'y-axis-2',
+              type: 'linear',
+              display: true,
+              position: 'right'
+            }
+          ]
+        }
+      };
+    });
+</script>
+
+</html>
