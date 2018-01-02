@@ -3,7 +3,8 @@ var Schema = mongoose.Schema
 const connect = mongoose.connect.bind(mongoose)
 const NEWSBOY = require('./newsboy')
 const EOQ = require('./economic-order-quantity')
-const policies = { NEWSBOY,EOQ }
+const QR = require('./lot-size-reorder')
+const policies = { NEWSBOY,EOQ,QR }
 
 
 module.exports = function(Inventory) {
@@ -23,7 +24,7 @@ function check(transaction) {
   .then((monitorConfig) => {
     const policy=monitorConfig.policy
     if (policies[policy])
-      return policies[policy].call(this,transaction,monitorConfig.params[policy])
+      return policies[policy].check.call(this,transaction,monitorConfig.params[policy])
     return this.Inventory.inventory
       .getItemStockLevel({item, date})
   })
@@ -50,6 +51,7 @@ const itemMonitorConfigSchema = new Schema({
     },
     QR: {
       demandMean: Number,
+      cycleDays: Number,
       demandDeviation: Number,
       leadTime: Number,
       setupCost: Number,

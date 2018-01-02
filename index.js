@@ -10,9 +10,15 @@ const Monitor = require('./monitor')
 const graphResults = require('./graph-results')
 const itemsMonitorConfig = require('./items-monitor-config')
 
+const NEWSBOY = require('./newsboy')
+const EOQ = require('./economic-order-quantity')
+const QR = require('./lot-size-reorder')
+const policies = { NEWSBOY,EOQ,QR }
+
 let simulationId = 0
 var Inventory, monitor
 const mongoHost = 'localhost:27017/'
+let databaseName = ('' + new Date().getTime()).substring(6) + '_'
 
 
 
@@ -38,6 +44,7 @@ function runSimulation(req, res, next) {
   setUpNewConnection()
   createDummyItems()
     .then(createItemsConfig)
+    .then(insertInitialTransactions)
     .then(() => insertTransactions(simulationDates))
     .then(() => graphResults(Inventory, simulationDates))
     .then((result) => res.send(result))
@@ -45,14 +52,15 @@ function runSimulation(req, res, next) {
 }
 
 function setUpNewConnection() {
-  let databaseName = ('' + new Date().getTime()).substring(6) + '_' + simulationId
   try{
-    mongoose.connect(mongoHost + databaseName).connection.db.dropDatabase()
+    if (simulationId>1)
+      mongoose.connect(mongoHost + databaseName + (simulationId -1)).connection.db.dropDatabase()
   } catch (e){
     console.log(e)
   }
-  Inventory.connect(mongoHost + databaseName)
-  monitor.connect(mongoHost + databaseName)
+  console.log(databaseName + simulationId);
+  Inventory.connect(mongoHost + databaseName + simulationId)
+  monitor.connect(mongoHost + databaseName + simulationId)
   Inventory.startMonitor(monitor)
 }
 
@@ -77,6 +85,22 @@ function createItemsConfig() {
     })
 }
 
+function insertInitialTransactions(){
+  return Inventory.items.getItems()
+    .then(items => {
+      let getConfigPromises = items.map(({ _id }) => (monitor.getItemMonitorConfig({ item: _id.toString() })))
+      return Promise.all(getConfigPromises)
+    })
+    .then(itemsConfig => {
+      let saveTransactionsPromises = itemsConfig.map(itemConfig => {
+        let params = itemConfig.params[itemConfig.policy]
+        let quantity =policies[itemConfig.policy].getOrderSize(params);
+        let transaction = factory.createTransaction(itemConfig.item, quantity, global.startDate)
+        return Inventory.transactions.saveTransaction(transaction)
+      })
+      return Promise.all(saveTransactionsPromises)
+    })
+}
 
 function createDailyTransactions(date) {
   return Inventory.items.getItems()
@@ -86,10 +110,11 @@ function createDailyTransactions(date) {
     })
     .then(itemsConfig => {
       let saveTransactionsPromises = itemsConfig.map(itemConfig => {
-        let { demandMean, demandDeviation } = itemConfig.params[itemConfig.policy]
+        let { demandMean, demandDeviation, cycleDays } = itemConfig.params[itemConfig.policy]
         let distribution = gaussian(demandMean, demandDeviation)
         let quantity = -Math.floor(distribution.ppf(Math.random()))
-        let transaction = factory.createTransaction(itemConfig.item, quantity, date)
+        let dailyDemand = cycleDays?quantity/cycleDays:quantity;
+        let transaction = factory.createTransaction(itemConfig.item, dailyDemand, date)
         return Inventory.transactions.saveTransaction(transaction)
       })
       return Promise.all(saveTransactionsPromises)

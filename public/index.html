@@ -19,9 +19,9 @@
     .controller('MyAppCtrl', function($scope,$http) {
       $scope.data = []
       $scope.labels = []
-      $http.get('/simulate/10').then(function(res){
+      $http.get('/simulate/50').then(function(res){
         $scope.data = res.data
-        $scope.labels = Array.apply(null, {length:10}).map(Function.call, Number);
+        $scope.labels = Array.apply(null, {length:50}).map(Function.call, Number);
 
 
       })
